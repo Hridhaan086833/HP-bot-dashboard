@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Discord Bot 3D Control Center</title>
+	<!-- FontAwesome Icons & Google Fonts -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+	<!-- Three.js for 3D Background Canvas -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	<style>
+		:root {
+			--bg-dark: #090c15;
+			--card-bg: rgba(18, 24, 43, 0.65);
+			--card-border: rgba(99, 102, 241, 0.25);
+			--accent-purple: #6366f1;
+			--accent-cyan: #06b6d4;
+			--accent-pink: #ec4899;
+			--accent-emerald: #10b981;
+			--text-bright: #f8fafc;
+			--text-muted: #94a3b8;
+			--glow-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+			font-family: 'Outfit', sans-serif;
+		}
+
+		body {
+			background-color: var(--bg-dark);
+			color: var(--text-bright);
+			overflow-x: hidden;
+			min-height: 100vh;
+			position: relative;
+		}
+
+		/* 3D WebGL Canvas Background */
+		#webgl-bg {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			z-index: 0;
+			pointer-events: none;
+		}
+
+		/* Overlay Layout Container */
+		.dashboard-container {
+			position: relative;
+			z-index: 1;
+			max-width: 1400px;
+			margin: 0 auto;
+			padding: 2rem 1.5rem;
+			display: flex;
+			flex-direction: column;
+			gap: 2rem;
+		}
+
+		/* Header Styling with 3D Holographic Title */
+		header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: var(--card-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--card-border);
+			border-radius: 20px;
+			padding: 1.25rem 2rem;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+			transform-style: preserve-3d;
+			perspective: 1000px;
+		}
+
+		.brand-logo {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		.logo-cube {
+			width: 45px;
+			height: 45px;
+			background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+			border-radius: 12px;
+			display: grid;
+			place-items: center;
+			font-size: 1.5rem;
+			color: white;
+			box-shadow: 0 0 15px var(--accent-purple);
+			animation: cubePulse 3s infinite alternate ease-in-out;
+		}
+
+		@keyframes cubePulse {
+			0% { transform: rotate(0deg) scale(1); box-shadow: 0 0 15px var(--accent-purple); }
+			100% { transform: rotate(15deg) scale(1.08); box-shadow: 0 0 25px var(--accent-cyan); }
+		}
+
+		.brand-title {
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: 1.6rem;
+			font-weight: 700;
+			background: linear-gradient(90deg, #ffffff, var(--accent-cyan), var(--accent-pink));
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			letter-spacing: 0.5px;
+		}
+
+		.status-badge {
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+			background: rgba(16, 185, 129, 0.15);
+			border: 1px solid rgba(16, 185, 129, 0.4);
+			color: var(--accent-emerald);
+			padding: 0.5rem 1.2rem;
+			border-radius: 30px;
+			font-weight: 600;
+			font-size: 0.9rem;
+			box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+		}
+
+		.status-dot {
+			width: 10px;
+			height: 10px;
+			background-color: var(--accent-emerald);
+			border-radius: 50%;
+			box-shadow: 0 0 10px var(--accent-emerald);
+			animation: blink 1.5s infinite;
+		}
+
+		@keyframes blink {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.3; }
+		}
+
+		/* 3D Dynamic Tilt Card Grid */
+		.stats-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 1.5rem;
+			perspective: 1000px;
+		}
+
+		.tilt-card {
+			background: var(--card-bg);
+			backdrop-filter: blur(14px);
+			-webkit-backdrop-filter: blur(14px);
+			border: 1px solid var(--card-border);
+			border-radius: 20px;
+			padding: 1.5rem;
+			transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
+			transform-style: preserve-3d;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+			position: relative;
+			overflow: hidden;
+		}
+
+		.tilt-card::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: -100%;
+			width: 100%;
+			height: 100%;
+			background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+			transition: 0.5s;
+		}
+
+		.tilt-card:hover::before {
+			left: 100%;
+		}
+
+		.tilt-card:hover {
+			border-color: rgba(99, 102, 241, 0.6);
+			box-shadow: var(--glow-shadow), 0 20px 40px rgba(0, 0, 0, 0.6);
+		}
+
+		.card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 1rem;
+		}
+
+		.card-icon {
+			width: 48px;
+			height: 48px;
+			border-radius: 14px;
+			display: grid;
+			place-items: center;
+			font-size: 1.3rem;
+			background: rgba(255, 255, 255, 0.05);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			transform: translateZ(20px);
+		}
+
+		.card-title {
+			color: var(--text-muted);
+			font-size: 0.9rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			transform: translateZ(15px);
+		}
+
+		.card-value {
+			font-size: 2rem;
+			font-weight: 800;
+			margin-top: 0.3rem;
+			transform: translateZ(30px);
+			font-family: 'Space Grotesk', sans-serif;
+		}
+
+		.card-subtext {
+			color: var(--text-muted);
+			font-size: 0.85rem;
+			margin-top: 0.5rem;
+			transform: translateZ(10px);
+		}
+
+		/* Main Content Layout Grid */
+		.dashboard-grid {
+			display: grid;
+			grid-template-columns: 2fr 1fr;
+			gap: 1.5rem;
+		}
+
+		@media (max-width: 1024px) {
+			.dashboard-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		/* Detailed Content Panels */
+		.panel {
+			background: var(--card-bg);
+			backdrop-filter: blur(14px);
+			-webkit-backdrop-filter: blur(14px);
+			border: 1px solid var(--card-border);
+			border-radius: 20px;
+			padding: 1.8rem;
+			box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+			display: flex;
+			flex-direction: column;
+			gap: 1.2rem;
+		}
+
+		.panel-title {
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: 1.3rem;
+			font-weight: 700;
+			display: flex;
+			align-items: center;
+			gap: 0.8rem;
+			color: #ffffff;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+			padding-bottom: 0.8rem;
+		}
+
+		.panel-title i {
+			color: var(--accent-cyan);
+		}
+
+		/* Custom Stylized Table for Data */
+		.data-table-container {
+			overflow-x: auto;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			text-align: left;
+		}
+
+		th, td {
+			padding: 0.9rem 1rem;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+			font-size: 0.95rem;
+		}
+
+		th {
+			color: var(--text-muted);
+			font-weight: 600;
+			text-transform: uppercase;
+			font-size: 0.8rem;
+			letter-spacing: 0.5px;
+		}
+
+		tr:hover td {
+			background: rgba(255, 255, 255, 0.03);
+		}
+
+		.rank-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 28px;
+			height: 28px;
+			border-radius: 50%;
+			font-weight: 700;
+			font-size: 0.85rem;
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		.rank-1 { background: linear-gradient(135deg, #ffd700, #ffa500); color: black; box-shadow: 0 0 10px #ffd700; }
+		.rank-2 { background: linear-gradient(135deg, #c0c0c0, #e6e6e6); color: black; }
+		.rank-3 { background: linear-gradient(135deg, #cd7f32, #b87333); color: white; }
+
+		.badge {
+			padding: 0.3rem 0.8rem;
+			border-radius: 20px;
+			font-size: 0.8rem;
+			font-weight: 600;
+			display: inline-block;
+		}
+
+		.badge-purple { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); }
+		.badge-cyan { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+		.badge-pink { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.4); }
+
+		/* Control Toggle Buttons */
+		.module-list {
+			display: flex;
+			flex-direction: column;
+			gap: 0.8rem;
+		}
+
+		.module-item {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: rgba(255, 255, 255, 0.03);
+			padding: 0.8rem 1.2rem;
+			border-radius: 12px;
+			border: 1px solid rgba(255, 255, 255, 0.05);
+		}
+
+		.module-name {
+			font-weight: 600;
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+		}
+
+		/* Footer */
+		footer {
+			text-align: center;
+			color: var(--text-muted);
+			font-size: 0.85rem;
+			margin-top: 1rem;
+			padding-bottom: 1rem;
+		}
+	</style>
+</head>
+<body>
+	<!-- 3D Interactive WebGL Canvas -->
+	<canvas id="webgl-bg"></canvas>
+
+	<div class="dashboard-container">
+		<!-- Header -->
+		<header>
+			<div class="brand-logo">
+				<div class="logo-cube"><i class="fa-solid fa-cube"></i></div>
+				<div>
+					<div class="brand-title">DISCORD BOT 3D</div>
+					<div style="color: var(--text-muted); font-size: 0.85rem;">Live Command & Control Center</div>
+				</div>
+			</div>
+			<div class="status-badge" id="bot-status-badge">
+				<div class="status-dot"></div>
+				<span id="bot-status-text">CONNECTING...</span>
+			</div>
+		</header>
+
+		<!-- 3D Stat Cards Grid -->
+		<div class="stats-grid">
+			<div class="tilt-card" data-tilt>
+				<div class="card-header">
+					<div class="card-title">Ping & Latency</div>
+					<div class="card-icon" style="color: var(--accent-cyan);"><i class="fa-solid fa-wifi"></i></div>
+				</div>
+				<div class="card-value" id="stat-ping">-- ms</div>
+				<div class="card-subtext" id="stat-loop">Event Loop: -- ms</div>
+			</div>
+
+			<div class="tilt-card" data-tilt>
+				<div class="card-header">
+					<div class="card-title">Memory Allocation</div>
+					<div class="card-icon" style="color: var(--accent-purple);"><i class="fa-solid fa-microchip"></i></div>
+				</div>
+				<div class="card-value" id="stat-mem-rss">-- MB</div>
+				<div class="card-subtext" id="stat-mem-peak">Peak Python Memory: --</div>
+			</div>
+
+			<div class="tilt-card" data-tilt>
+				<div class="card-header">
+					<div class="card-title">Guilds & Users</div>
+					<div class="card-icon" style="color: var(--accent-pink);"><i class="fa-solid fa-users"></i></div>
+				</div>
+				<div class="card-value" id="stat-guilds">-- / --</div>
+				<div class="card-subtext" id="stat-db-users">Registered DB Users: --</div>
+			</div>
+
+			<div class="tilt-card" data-tilt>
+				<div class="card-header">
+					<div class="card-title">System Uptime</div>
+					<div class="card-icon" style="color: var(--accent-emerald);"><i class="fa-solid fa-clock"></i></div>
+				</div>
+				<div class="card-value" id="stat-uptime">0h 0m 0s</div>
+				<div class="card-subtext" id="stat-python">Python --</div>
+			</div>
+		</div>
+
+		<!-- Main Dashboard Layout Grid -->
+		<div class="dashboard-grid">
+			<!-- Left Column: Economy & Support Tickets -->
+			<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+				<!-- Economy Leaderboard Panel -->
+				<div class="panel">
+					<div class="panel-title">
+						<i class="fa-solid fa-trophy" style="color: #ffd700;"></i> Top Economy Leaderboard
+					</div>
+					<div class="data-table-container">
+						<table>
+							<thead>
+								<tr>
+									<th>Rank</th>
+									<th>User Name</th>
+									<th>Discord ID</th>
+									<th>Coin Balance</th>
+								</tr>
+							</thead>
+							<tbody id="leaderboard-tbody">
+								<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading economy rankings...</td></tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- Support Ticket Tracking Panel -->
+				<div class="panel">
+					<div class="panel-title">
+						<i class="fa-solid fa-headset"></i> Active Support Tickets
+					</div>
+					<div class="data-table-container">
+						<table>
+							<thead>
+								<tr>
+									<th>Category</th>
+									<th>User ID</th>
+									<th>Claimed By</th>
+									<th>Opened At</th>
+								</tr>
+							</thead>
+							<tbody id="tickets-tbody">
+								<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No active tickets.</td></tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- Right Column: Security & Deletion Logs -->
+			<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+				<!-- Anti-Nuke Status Panel -->
+				<div class="panel">
+					<div class="panel-title">
+						<i class="fa-solid fa-shield-halved" style="color: var(--accent-pink);"></i> Anti-Nuke Safeguards
+					</div>
+					<div id="antinuke-container" class="module-list">
+						<div style="color: var(--text-muted); font-size: 0.9rem;">Fetching Anti-Nuke configurations...</div>
+					</div>
+				</div>
+
+				<!-- Recent Deleted Message Logs -->
+				<div class="panel">
+					<div class="panel-title">
+						<i class="fa-solid fa-trash-can" style="color: var(--accent-cyan);"></i> Audit Deletion Logs
+					</div>
+					<div id="logs-container" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 380px; overflow-y: auto;">
+						<div style="color: var(--text-muted); font-size: 0.9rem;">No recent deleted messages.</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<footer>
+			3D Interactive Control Center &bull; Bottrial Engine &bull; Real-time Synchronization Active
+		</footer>
+	</div>
+
+	<!-- 3D Interactive WebGL Scene & Dashboard Logic -->
+	<script>
+		// --- THREE.JS 3D SCENE SETUP ---
+		const canvas = document.getElementById('webgl-bg');
+		const scene = new THREE.Scene();
+		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+		renderer.setSize(window.innerWidth, window.innerHeight);
+
+		// Dynamic 3D Objects
+		const objectsGroup = new THREE.Group();
+		scene.add(objectsGroup);
+
+		// Torus Knot floating geometry
+		const geometryKnot = new THREE.TorusKnotGeometry(1.8, 0.45, 120, 16);
+		const materialKnot = new THREE.MeshPhysicalMaterial({
+			color: 0x6366f1,
+			wireframe: true,
+			emissive: 0x4f46e5,
+			emissiveIntensity: 0.5,
+			roughness: 0.2
+		});
+		const torusKnot = new THREE.Mesh(geometryKnot, materialKnot);
+		torusKnot.position.set(-6, 2, -5);
+		objectsGroup.add(torusKnot);
+
+		// Icosahedron 3D crystal
+		const geometryIcosa = new THREE.IcosahedronGeometry(2, 1);
+		const materialIcosa = new THREE.MeshStandardMaterial({
+			color: 0x06b6d4,
+			wireframe: true,
+			emissive: 0x0891b2,
+			emissiveIntensity: 0.4
+		});
+		const icosahedron = new THREE.Mesh(geometryIcosa, materialIcosa);
+		icosahedron.position.set(6, -2, -4);
+		objectsGroup.add(icosahedron);
+
+		// Particle Stars System
+		const particlesCount = 350;
+		const posArray = new Float32Array(particlesCount * 3);
+		for(let i=0; i<particlesCount*3; i++) {
+			posArray[i] = (Math.random() - 0.5) * 35;
+		}
+		const particlesGeo = new THREE.BufferGeometry();
+		particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+		const particlesMat = new THREE.PointsMaterial({
+			size: 0.08,
+			color: 0xec4899,
+			transparent: true,
+			opacity: 0.7
+		});
+		const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
+		scene.add(particlesMesh);
+
+		// Ambient & Directional Lights
+		const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+		scene.add(ambientLight);
+		const pointLight = new THREE.PointLight(0x06b6d4, 2, 50);
+		pointLight.position.set(5, 5, 5);
+		scene.add(pointLight);
+
+		camera.position.z = 8;
+
+		// Mouse 3D Parallax Movement
+		let mouseX = 0, mouseY = 0;
+		window.addEventListener('mousemove', (e) => {
+			mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+			mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+		});
+
+		window.addEventListener('resize', () => {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		});
+
+		// Animation Loop
+		function animate() {
+			requestAnimationFrame(animate);
+
+			torusKnot.rotation.x += 0.005;
+			torusKnot.rotation.y += 0.008;
+
+			icosahedron.rotation.x -= 0.006;
+			icosahedron.rotation.y += 0.007;
+
+			particlesMesh.rotation.y += 0.0005;
+
+			// Smooth camera parallax
+			camera.position.x += (mouseX * 0.8 - camera.position.x) * 0.05;
+			camera.position.y += (-mouseY * 0.8 - camera.position.y) * 0.05;
+			camera.lookAt(scene.position);
+
+			renderer.render(scene, camera);
+		}
+		animate();
+
+		// --- 3D TILT EFFECT ON CARDS ---
+		const tiltCards = document.querySelectorAll('[data-tilt]');
+		tiltCards.forEach(card => {
+			card.addEventListener('mousemove', (e) => {
+				const rect = card.getBoundingClientRect();
+				const x = e.clientX - rect.left;
+				const y = e.clientY - rect.top;
+				const centerX = rect.width / 2;
+				const centerY = rect.height / 2;
+				const rotateX = ((y - centerY) / centerY) * -12;
+				const rotateY = ((x - centerX) / centerX) * 12;
+
+				card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+			});
+
+			card.addEventListener('mouseleave', () => {
+				card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+			});
+		});
+
+		// --- LIVE API FETCHING & REALTIME DASHBOARD UPDATES ---
+		function formatUptime(seconds) {
+			const h = Math.floor(seconds / 3600);
+			const m = Math.floor((seconds % 3600) / 60);
+			const s = seconds % 60;
+			return `${h}h ${m}m ${s}s`;
+		}
+
+		async function fetchStats() {
+			try {
+				const res = await fetch('/api/stats');
+				if (!res.ok) return;
+				const data = await res.json();
+
+				document.getElementById('bot-status-text').innerText = data.status.toUpperCase();
+				document.getElementById('stat-ping').innerText = `${data.ping_ms} ms`;
+				document.getElementById('stat-mem-rss').innerText = data.memory_rss;
+				document.getElementById('stat-mem-peak').innerText = `Python Peak: ${data.memory_peak}`;
+				document.getElementById('stat-guilds').innerText = `${data.guilds} Guilds / ${data.members} Members`;
+				document.getElementById('stat-db-users').innerText = `Registered DB Users: ${data.db_stats.users_count}`;
+				document.getElementById('stat-uptime').innerText = formatUptime(data.uptime_seconds);
+				document.getElementById('stat-python').innerText = `Python ${data.python_version}`;
+			} catch (err) {
+				console.error("Error fetching stats:", err);
+			}
+		}
+
+		async function fetchLeaderboard() {
+			try {
+				const res = await fetch('/api/leaderboard');
+				if (!res.ok) return;
+				const data = await res.json();
+				const tbody = document.getElementById('leaderboard-tbody');
+
+				if (!data.leaderboard || data.leaderboard.length === 0) {
+					tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No coin records available yet.</td></tr>';
+					return;
+				}
+
+				tbody.innerHTML = data.leaderboard.map((item, index) => {
+					const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
+					return `
+						<tr>
+							<td><span class="rank-badge ${rankClass}">${index + 1}</span></td>
+							<td style="font-weight: 600;">${item.name}</td>
+							<td style="color: var(--text-muted); font-size: 0.85rem;"><code>${item.id}</code></td>
+							<td style="color: var(--accent-emerald); font-weight: 700;">${item.balance.toLocaleString()} coins</td>
+						</tr>
+					`;
+				}).join('');
+			} catch (err) {
+				console.error("Error fetching leaderboard:", err);
+			}
+		}
+
+		async function fetchTickets() {
+			try {
+				const res = await fetch('/api/tickets');
+				if (!res.ok) return;
+				const data = await res.json();
+				const tbody = document.getElementById('tickets-tbody');
+
+				if (!data.tickets || data.tickets.length === 0) {
+					tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No active support tickets.</td></tr>';
+					return;
+				}
+
+				tbody.innerHTML = data.tickets.map(ticket => `
+					<tr>
+						<td><span class="badge badge-purple">${ticket.category.toUpperCase()}</span></td>
+						<td style="font-weight: 600;">${ticket.user_name}</td>
+						<td><span class="badge ${ticket.claimed_by ? 'badge-cyan' : 'badge-pink'}">${ticket.claimed_name}</span></td>
+						<td style="color: var(--text-muted); font-size: 0.85rem;">${new Date(ticket.created_at).toLocaleTimeString()}</td>
+					</tr>
+				`).join('');
+			} catch (err) {
+				console.error("Error fetching tickets:", err);
+			}
+		}
+
+		async function fetchAntiNuke() {
+			try {
+				const res = await fetch('/api/antinuke');
+				if (!res.ok) return;
+				const data = await res.json();
+				const container = document.getElementById('antinuke-container');
+
+				if (!data.antinuke || data.antinuke.length === 0) {
+					container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">No server Anti-Nuke configured.</div>';
+					return;
+				}
+
+				const config = data.antinuke[0];
+				let modulesHTML = Object.entries(config.modules || {}).map(([mod, enabled]) => `
+					<div class="module-item">
+						<span class="module-name"><i class="fa-solid fa-shield"></i> ${mod}</span>
+						<span class="badge ${enabled ? 'badge-cyan' : 'badge-pink'}">${enabled ? 'GUARDED' : 'DISABLED'}</span>
+					</div>
+				`).join('');
+
+				container.innerHTML = `
+					<div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+						<span class="badge ${config.enabled ? 'badge-cyan' : 'badge-pink'}">SYSTEM: ${config.enabled ? 'ENABLED' : 'DISABLED'}</span>
+						<span class="badge badge-purple">PUNISHMENT: ${config.punishment.toUpperCase()}</span>
+					</div>
+					${modulesHTML}
+				`;
+			} catch (err) {
+				console.error("Error fetching antinuke:", err);
+			}
+		}
+
+		async function fetchDeletedLogs() {
+			try {
+				const res = await fetch('/api/deleted-logs');
+				if (!res.ok) return;
+				const data = await res.json();
+				const container = document.getElementById('logs-container');
+
+				if (!data.logs || data.logs.length === 0) {
+					container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">No recent deleted messages.</div>';
+					return;
+				}
+
+				container.innerHTML = data.logs.map(log => `
+					<div class="module-item" style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+						<div style="display: flex; justify-content: space-between; width: 100%;">
+							<strong style="color: var(--text-bright);">${log.author_name}</strong>
+							<span style="color: var(--text-muted); font-size: 0.75rem;">${new Date(log.deleted_at).toLocaleTimeString()}</span>
+						</div>
+						<div style="color: var(--text-muted); font-size: 0.85rem;">${log.content}</div>
+						<div style="font-size: 0.75rem; color: var(--accent-pink);">Reason: ${log.reason}</div>
+					</div>
+				`).join('');
+			} catch (err) {
+				console.error("Error fetching deleted logs:", err);
+			}
+		}
+
+		function refreshAll() {
+			fetchStats();
+			fetchLeaderboard();
+			fetchTickets();
+			fetchAntiNuke();
+			fetchDeletedLogs();
+		}
+
+		refreshAll();
+		setInterval(refreshAll, 5000);
+	</script>
+</body>
+</html>
