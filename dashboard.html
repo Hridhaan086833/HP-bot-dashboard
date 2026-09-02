@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HP Bot Control Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand-lockup">
+          <div class="brand-mark">HP</div>
+          <div>
+            <p class="eyebrow">Discord command room</p>
+            <h2>HP Bot</h2>
+          </div>
+        </div>
+        <nav class="mode-switcher" aria-label="Dashboard views">
+          <button class="mode-button active" data-mode="overview"><span>◈</span> Command center</button>
+          <button class="mode-button" data-mode="security"><span>⌁</span> Security</button>
+          <button class="mode-button" data-mode="support"><span>▣</span> Support desk</button>
+          <button class="mode-button" data-mode="games"><span>✦</span> Game room</button>
+          <button class="mode-button" data-mode="economy"><span>◌</span> Economy</button>
+        </nav>
+        <div class="sidebar-footer"><span class="online-dot"></span><div><strong>Gateway connected</strong><small>All systems operational</small></div></div>
+      </aside>
+
+      <main class="dashboard">
+        <header class="topbar">
+          <div><p class="eyebrow accent">Wednesday, 02 September 2026</p><h1 id="pageTitle">Command center</h1></div>
+          <div class="top-actions"><label class="server-select">Server<select id="serverSelect"><option>All connected servers</option></select></label><button class="icon-button" id="refreshButton" title="Refresh live telemetry">↻</button><button class="avatar-button" title="Admin profile">AD</button></div>
+        </header>
+        <section class="hero card">
+          <div class="hero-copy">
+            <p class="eyebrow accent">Live command nexus</p>
+            <h2>HP Bot is on watch.</h2>
+            <p class="subtitle">
+              Your community is moving cleanly across support, security, games, and economy. Pick a module to inspect its live signal.
+            </p>
+            <div class="button-row">
+              <button class="primary-button" id="deployButton">Deploy config <span>→</span></button>
+              <button class="ghost-button" id="logButton">Open health log</button>
+            </div>
+          </div>
+
+          <div class="orbital-panel">
+            <canvas id="scene" aria-label="3D bot status visualization"></canvas>
+            <div class="status-badge" id="statusBadge">System nominal</div>
+          </div>
+        </section>
+
+        <section class="stats-grid">
+          <article class="card stat">
+            <p class="stat-label">Guilds</p>
+            <div class="stat-value" data-stat="guilds">0</div>
+            <div class="stat-meta">Connected servers</div>
+          </article>
+
+          <article class="card stat">
+            <p class="stat-label">Members</p>
+            <div class="stat-value" data-stat="members">0</div>
+            <div class="stat-meta">Active community</div>
+          </article>
+
+          <article class="card stat">
+            <p class="stat-label">Uptime</p>
+            <div class="stat-value" data-stat="uptime">0h 0m</div>
+            <div class="stat-meta">Runtime stability</div>
+          </article>
+
+          <article class="card stat">
+            <p class="stat-label">Latency</p>
+            <div class="stat-value" data-stat="latency">0ms</div>
+            <div class="stat-meta">Websocket response</div>
+          </article>
+          <article class="card stat accent-stat"><p class="stat-label">Live events</p><div class="stat-value" data-stat="events">0</div><div class="stat-meta">Recorded in SQLite</div></article>
+        </section>
+
+        <section class="workspace-grid">
+          <article class="card chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow accent">Signal flow</p>
+                <h3>Activity throughput</h3>
+              </div>
+              <div class="chart-tools"><button class="range-button active">24H</button><button class="range-button">7D</button><span class="mini-pill" id="trendLabel">Overview</span></div>
+            </div>
+            <canvas id="trendChart" width="640" height="240" aria-label="Bot activity chart"></canvas>
+          </article>
+
+          <article class="card module-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow accent">System map</p>
+                <h3>Critical modules</h3>
+              </div>
+            </div>
+            <div id="moduleList" class="module-list"></div>
+          </article>
+        </section>
+        <section class="lower-grid">
+          <article class="card feed-panel"><div class="panel-header"><div><p class="eyebrow accent">Event stream</p><h3>Latest signals</h3></div><span class="live-label"><i></i> Live</span></div><div id="eventFeed" class="event-feed"></div></article>
+          <article class="card quick-panel"><div class="panel-header"><div><p class="eyebrow accent">Operator tools</p><h3>Quick actions</h3></div></div><div class="quick-actions"><button data-action="health"><span>◉</span><strong>Run health check</strong><small>Inspect latency and memory</small></button><button data-action="security"><span>⌁</span><strong>Review anti-nuke</strong><small>Open protection status</small></button><button data-action="support"><span>▣</span><strong>Open ticket desk</strong><small>Review support flow</small></button></div></article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
